@@ -5,6 +5,7 @@ import random
 # import matplotlib.pyplot as plt
 np.set_printoptions(threshold=np.inf)
 
+delay=[]
 
 def random_pick(some_list, probabilities):
     x = random.uniform(0, 1)
@@ -117,8 +118,11 @@ def train(iot_RL_list, NUM_EPISODE):
                                                                reward_fun(process_delay[time_index, iot_index],
                                                                           env.max_delay,
                                                                           unfinish_indi[time_index, iot_index]))
+                        
                         iot_RL_list[iot_index].do_store_delay(episode, time_index,
                                                               process_delay[time_index, iot_index])
+                        #print("Delay is:",delayy)
+                        #delay.append(delayy)
                         reward_indicator[time_index, iot_index] = 1
 
             # ADD STEP (one step does not mean one store)
@@ -143,9 +147,9 @@ def train(iot_RL_list, NUM_EPISODE):
 
 if __name__ == "__main__":
 
-    NUM_IOT = 50
-    NUM_FOG = 5
-    NUM_EPISODE = 1000
+    NUM_IOT = 10
+    NUM_FOG = 4
+    NUM_EPISODE = 400
     NUM_TIME_BASE = 100
     MAX_DELAY = 10
     NUM_TIME = NUM_TIME_BASE + MAX_DELAY
@@ -154,16 +158,23 @@ if __name__ == "__main__":
     env = Offload(NUM_IOT, NUM_FOG, NUM_TIME, MAX_DELAY)
 
     # GENERATE MULTIPLE CLASSES FOR RL
-    iot_RL_list = list()
+    iot_RL_list = list() 
     for iot in range(NUM_IOT):
         iot_RL_list.append(DeepQNetwork(env.n_actions, env.n_features, env.n_lstm_state, env.n_time,
-                                        learning_rate=0.01,
+                                        learning_rate=0.0001,
                                         reward_decay=0.9,
                                         e_greedy=0.99,
                                         replace_target_iter=200,  # each 200 steps, update target net
-                                        memory_size=500,  # maximum of memory
+                                        memory_size=1000,  # maximum of memory
                                         ))
 
     # TRAIN THE SYSTEM
     train(iot_RL_list, NUM_EPISODE)
+    
+    for iot in range(NUM_IOT):
+        iot_RL_list[iot].plot(iot)
+        #iot_RL_list[iot].plot_loss()
+        #iot_RL_list[iot].plot_delay()
+        
+        
     print('Training Finished')

@@ -10,11 +10,11 @@ class DeepQNetwork:
                  n_features,
                  n_lstm_features,
                  n_time,
-                 learning_rate = 0.01,
+                 learning_rate = 0.0001,
                  reward_decay = 0.9,
                  e_greedy = 0.99,
                  replace_target_iter = 200,  # each 200 steps, update target net
-                 memory_size = 500,  # maximum of memory
+                 memory_size = 1000,  # maximum of memory
                  batch_size=32,
                  e_greedy_increment= 0.00025,
                  n_lstm_step = 10,
@@ -69,6 +69,12 @@ class DeepQNetwork:
             self.lstm_history.append(np.zeros([self.n_lstm_state]))
 
         self.store_q_value = list()
+        
+        self.cost_his = []
+        self.loss_his = []
+        self.time = []
+        self.episode = []
+        self.delay = []
 
     def _build_net(self):
 
@@ -263,10 +269,20 @@ class DeepQNetwork:
                                      feed_dict={self.s: batch_memory[:, :self.n_features],
                                                 self.lstm_s: lstm_batch_memory[:, :, :self.n_lstm_state],
                                                 self.q_target: q_target})
-
+            
+        loss = self.sess.run(self.loss,
+                                feed_dict={self.s: batch_memory[:, :self.n_features],
+                                                self.lstm_s: lstm_batch_memory[:, :, :self.n_lstm_state],
+                                                self.q_target: q_target
+            })
+    
+        self.loss_his.append(np.average(loss))
+        self.cost_his.append(np.average(self.cost))
+        
         # gradually increase epsilon
         self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
         self.learn_step_counter += 1
+         
 
     def do_store_reward(self, episode, time, reward):
         while episode >= len(self.reward_store):
@@ -282,3 +298,61 @@ class DeepQNetwork:
         while episode >= len(self.delay_store):
             self.delay_store.append(np.zeros([self.n_time]))
         self.delay_store[episode][time] = delay
+        self.time = time
+        self.episode = episode
+        self.delay=delay
+        
+
+        
+        
+    def plot_cost(self):
+        import matplotlib.pyplot as plt
+        #print(self.cost_his)
+        plt.plot(np.arange(len(self.cost_his)), np.mean(self.cost_his))
+        plt.ylabel('Cost')
+        plt.xlabel('Episodes')
+        plt.show()
+        
+    def plot_loss(self):
+        import matplotlib.pyplot as plt
+        #print(self.loss_his)
+        plt.plot(np.arange(self.loss_his), np.mean(self.loss_his))
+        plt.ylabel('Loss')
+        plt.xlabel('Episodes')
+        plt.show()
+        
+    def plot(self,cnt):
+        import matplotlib.pyplot as plt
+        import pandas as pd
+        
+        df = pd.DataFrame({
+                'cost': self.cost_his,
+                'loss': self.loss_his})
+            
+        df['cost_rolling_avg'] = df.cost.rolling(20).mean()
+        df[ 'loss_rolling_avg' ] = df.loss.rolling(20).mean()
+        
+        fig = plt.figure(figsize=(10, 8))
+        plt.plot(np.arange(len(self.cost_his)), df['cost_rolling_avg'], color="red")
+        plt.ylabel('Cost')
+        plt.xlabel('Episodes')
+        plt.show()
+        str1= 'C:/Users/astha/OneDrive - Texas Tech University/Spring 2023/Analysis of Algo/Project/Reference projrct/results/learning rates/u'+str(cnt)+'_cost_lr0001.png'
+        plt.savefig(str1,dpi=400)
+        plt.close(fig)
+        
+        fig2 = plt.figure(figsize=(10, 8))
+        plt.plot(np.arange(len(self.loss_his)), df['loss_rolling_avg'], color="green")
+        plt.ylabel('Loss')
+        plt.xlabel('Episodes')
+        plt.show()
+        str2= 'C:/Users/astha/OneDrive - Texas Tech University/Spring 2023/Analysis of Algo/Project/Reference projrct/results/learning rates/u'+str(cnt)+'_loss_lr0001.png'
+        plt.savefig(str2,dpi=400)
+        plt.close(fig2)
+ #   def plot_delay(self):
+  #      import matplotlib.pyplot as plt
+   #     #print(self.loss_his)
+    #    plt.plot(self.episode, self.time)
+     #   plt.ylabel('Delay')
+      #  plt.xlabel('Task Deadline (sec)')
+       # plt.show()
