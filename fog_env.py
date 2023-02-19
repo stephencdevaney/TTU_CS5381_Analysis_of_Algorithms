@@ -17,6 +17,7 @@ class Offload:
         self.drop_trans_count = 0
         self.drop_fog_count = 0
         self.drop_iot_count = 0
+        self.total_count = 0
 
         # CONSIDER A SCENARIO RANDOM IS NOT GOOD
         # LOCAL CAP SHOULD NOT BE TOO SMALL, OTHERWISE, THE STATE MATRIX IS TOO LARGE (EXCEED THE MAXIMUM)
@@ -90,6 +91,7 @@ class Offload:
         self.drop_trans_count = 0
         self.drop_fog_count = 0
         self.drop_iot_count = 0
+        self.total_count = 0
 
         # BITRATE
         self.bitArrive = bitArrive
@@ -144,10 +146,11 @@ class Offload:
                     self.bitArrive[self.time_count, iot_index], self.t_iot_comp[iot_index],
                     self.t_iot_tran[iot_index],
                     np.squeeze(self.b_fog_comp[iot_index, :])])
-
+                
         lstm_state_all = np.zeros([self.n_iot, self.n_lstm_state])
 
         return observation_all, lstm_state_all
+
 
     # perform action, observe state and delay (several steps later)
     def step(self, action):
@@ -298,17 +301,17 @@ class Offload:
                             self.process_delay_unfinish_ind[get_task['time'], iot_index] = 1
 
             # PROCESS
-            if self.task_on_transmit_local[iot_index]['remain'] > 0:
+            if self.task_on_transmit_local[iot_index]['remain'] > 0:                
                 self.task_on_transmit_local[iot_index]['remain'] = \
                     self.task_on_transmit_local[iot_index]['remain'] \
                     - iot_tran_cap[self.task_on_transmit_local[iot_index]['fog']]
+                self.total_count = self.total_count + 1
 
                 # UPDATE FOG QUEUE
                 if self.task_on_transmit_local[iot_index]['remain'] <= 0:
                     tmp_dict = {'size': self.task_on_transmit_local[iot_index]['size'],
                                 'time': self.task_on_transmit_local[iot_index]['time']}
                     self.Queue_fog_comp[iot_index][self.task_on_transmit_local[iot_index]['fog']].put(tmp_dict)
-
                     # OTHER INFO
                     fog_index = self.task_on_transmit_local[iot_index]['fog']
                     self.b_fog_comp[iot_index, fog_index] \

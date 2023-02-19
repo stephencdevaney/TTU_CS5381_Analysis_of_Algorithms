@@ -1,11 +1,17 @@
 from fog_env import Offload
 from RL_brain import DeepQNetwork
 import numpy as np
+import pandas as pd
+import os.path
 import random
 # import matplotlib.pyplot as plt
 np.set_printoptions(threshold=np.inf)
 
-delay=[]
+#delay=[]
+dropped_task_ratio=[]
+rdt_vs_tap = False
+rdt_vs_nmd = False
+rdt_vs_td = False
 
 def random_pick(some_list, probabilities):
     x = random.uniform(0, 1)
@@ -33,9 +39,9 @@ def reward_fun(delay, max_delay, unfinish_indi):
 def train(iot_RL_list, NUM_EPISODE):
 
     RL_step = 0
-
+    for i in range(NUM_EPISODE):
+        dropped_task_ratio.append(0)
     for episode in range(NUM_EPISODE):
-
         print(episode)
         print(iot_RL_list[0].epsilon)
         # BITRATE ARRIVAL
@@ -84,6 +90,7 @@ def train(iot_RL_list, NUM_EPISODE):
 
             # OBSERVE THE NEXT STATE AND PROCESS DELAY (REWARD)
             observation_all_, lstm_state_all_, done = env.step(action_all)
+            
 
             # should store this information in EACH time slot
             for iot_index in range(env.n_iot):
@@ -124,6 +131,8 @@ def train(iot_RL_list, NUM_EPISODE):
                         #print("Delay is:",delayy)
                         #delay.append(delayy)
                         reward_indicator[time_index, iot_index] = 1
+                        
+                    #delay[iot_index] = process_delay[time_index, iot_index]
 
             # ADD STEP (one step does not mean one store)
             RL_step += 1
@@ -140,16 +149,17 @@ def train(iot_RL_list, NUM_EPISODE):
             # GAME ENDS
             if done:
                 break
+        dropped_task_ratio[episode] = (env.drop_trans_count + env.drop_fog_count + env.drop_iot_count)/env.total_count
         #  =================================================================================================
         #  ======================================== DRL END=================================================
         #  =================================================================================================
-
+    
 
 if __name__ == "__main__":
 
-    NUM_IOT = 10
-    NUM_FOG = 4
-    NUM_EPISODE = 400
+    NUM_IOT = 50
+    NUM_FOG = 5
+    NUM_EPISODE = 100
     NUM_TIME_BASE = 100
     MAX_DELAY = 10
     NUM_TIME = NUM_TIME_BASE + MAX_DELAY
@@ -165,16 +175,54 @@ if __name__ == "__main__":
                                         reward_decay=0.9,
                                         e_greedy=0.99,
                                         replace_target_iter=200,  # each 200 steps, update target net
-                                        memory_size=1000,  # maximum of memory
+                                        memory_size=500,  # maximum of memory
+                                        batch_size=16
                                         ))
 
     # TRAIN THE SYSTEM
     train(iot_RL_list, NUM_EPISODE)
     
-    for iot in range(NUM_IOT):
-        iot_RL_list[iot].plot(iot)
+    #for iot in range(NUM_IOT):
+        #iot_RL_list[iot].plot(iot)
         #iot_RL_list[iot].plot_loss()
         #iot_RL_list[iot].plot_delay()
+    
+    if rdt_vs_tap:
+        # Export Ratio of Dropped Task vs Task Arrival Probability Info
+        file_path = "RDT_vs_TAP.csv"
+        if(os.path.exists(file_path)):
+            df = pd.read_csv(file_path)
+        else:
+            df = pd.DataFrame(columns=['RDT', 'TAP'])
+        df.loc[len(df.index)] = [sum(dropped_task_ratio)/NUM_EPISODE, env.task_arrive_prob]
+        print(df)
+        df.to_csv(file_path, index=False)
         
+    if rdt_vs_nmd:
+        # Export Ratio of Dropped Task vs Number of Mobile Devices
+        file_path = "RDT_vs_NMD.csv"
+        if(os.path.exists(file_path)):
+            df = pd.read_csv(file_path)
+        else:
+            df = pd.DataFrame(columns=['RDT', 'NMD'])
+        df.loc[len(df.index)] = [sum(dropped_task_ratio)/NUM_EPISODE, NUM_IOT]
+        print(df)
+        df.to_csv(file_path, index=False)
         
+    if rdt_vs_td:
+        # Export Ratio of Dropped Task vs Task Arrival Probability Info
+        file_path = "RDT_vs_TD.csv"
+        if(os.path.exists(file_path)):
+            df = pd.read_csv(file_path)
+        else:
+            df = pd.DataFrame(columns=['RDT', 'TD'])
+        df.loc[len(df.index)] = [sum(dropped_task_ratio)/NUM_EPISODE, env.duration]
+        print(df)
+        df.to_csv(file_path, index=False)
+    
+    print(env.drop_trans_count)
+    print(env.drop_fog_count)
+    print(env.drop_iot_count)
+    print(env.total_count)
+    
     print('Training Finished')
