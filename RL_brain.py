@@ -56,7 +56,9 @@ class DeepQNetwork:
         e_params = tf.get_collection('eval_net_params')  # obtain the parameters in eval_net
         self.replace_target_op = [tf.assign(t, e) for t, e in
                                       zip(t_params, e_params)]  # update the parameters in target_net
-
+        
+        ##print('Eval_net_params: ', e_params)
+        #-print('Replaced or not: ', self.replace_target_op)
         self.sess = tf.Session()
 
         self.sess.run(tf.global_variables_initializer())
@@ -298,33 +300,20 @@ class DeepQNetwork:
         while episode >= len(self.delay_store):
             self.delay_store.append(np.zeros([self.n_time]))
         self.delay_store[episode][time] = delay
+        
         self.time = time
         self.episode = episode
         self.delay=delay
+        #print('Delay')
         
-
         
+    
         
-    def plot_cost(self):
-        import matplotlib.pyplot as plt
-        #print(self.cost_his)
-        plt.plot(np.arange(len(self.cost_his)), np.mean(self.cost_his))
-        plt.ylabel('Cost')
-        plt.xlabel('Episodes')
-        plt.show()
-        
-    def plot_loss(self):
-        import matplotlib.pyplot as plt
-        #print(self.loss_his)
-        plt.plot(np.arange(self.loss_his), np.mean(self.loss_his))
-        plt.ylabel('Loss')
-        plt.xlabel('Episodes')
-        plt.show()
-        
-    def plot(self,cnt):
+    def plot(self):
         import matplotlib.pyplot as plt
         import pandas as pd
         
+        self.cost_his =[i/(np.max(self.cost_his)) for i in self.cost_his]
         df = pd.DataFrame({
                 'cost': self.cost_his,
                 'loss': self.loss_his})
@@ -332,27 +321,13 @@ class DeepQNetwork:
         df['cost_rolling_avg'] = df.cost.rolling(20).mean()
         df[ 'loss_rolling_avg' ] = df.loss.rolling(20).mean()
         
-        fig = plt.figure(figsize=(10, 8))
-        plt.plot(np.arange(len(self.cost_his)), df['cost_rolling_avg'], color="red")
+        
+        plt.plot(np.arange(len(self.cost_his)), df['cost_rolling_avg'], marker='^',color='red', label='lr = 0.01')
         plt.ylabel('Cost')
         plt.xlabel('Episodes')
         plt.show()
-        str1= 'C:/Users/astha/OneDrive - Texas Tech University/Spring 2023/Analysis of Algo/Project/Reference projrct/results/learning rates/u'+str(cnt)+'_cost_lr0001.png'
-        plt.savefig(str1,dpi=400)
-        plt.close(fig)
+        #str1= 'C:/Users/astha/OneDrive - Texas Tech University/Spring 2023/Analysis of Algo/Project/Reference projrct/results/learning rates/u'+str(cnt)+'_cost_lr0001.png'
+        #plt.savefig(str1,dpi=400)
+        #plt.close(fig)
         
-        fig2 = plt.figure(figsize=(10, 8))
-        plt.plot(np.arange(len(self.loss_his)), df['loss_rolling_avg'], color="green")
-        plt.ylabel('Loss')
-        plt.xlabel('Episodes')
-        plt.show()
-        str2= 'C:/Users/astha/OneDrive - Texas Tech University/Spring 2023/Analysis of Algo/Project/Reference projrct/results/learning rates/u'+str(cnt)+'_loss_lr0001.png'
-        plt.savefig(str2,dpi=400)
-        plt.close(fig2)
- #   def plot_delay(self):
-  #      import matplotlib.pyplot as plt
-   #     #print(self.loss_his)
-    #    plt.plot(self.episode, self.time)
-     #   plt.ylabel('Delay')
-      #  plt.xlabel('Task Deadline (sec)')
-       # plt.show()
+        
